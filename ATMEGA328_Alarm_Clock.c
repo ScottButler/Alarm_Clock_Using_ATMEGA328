@@ -41,13 +41,13 @@ int main(void)
 	DDRD |= (1<<DDD6);    //OC0A as output, PD6, pin12
 	
 	DDRC = 0x00;
-    DDRB |= (1<<DDB3) | (1<<DDB2) | (1<<DDB5);    //all output for PORTB except pb6 and pb7 for oscillator
+	DDRB |= (1<<DDB3) | (1<<DDB2) | (1<<DDB5);    //all output for PORTB except pb6 and pb7 for oscillator
 	
 	PORTB |= (1<<PORTB2) | (1<<PORTB5);    //CS HIGH
 
 	ASSR |= (1<<AS2);    //enable crystal as input for timer2
 	TCCR2B |= (1<<CS22) | (1<<CS20);    //Pre-scale of 128
-	//TCCR2B |=(1<<CS20);    //pre-scale = 1
+	//TCCR2B |=(1<<CS20);    //pre-scale = 1, used for testing
 	EIMSK |= (1<<INT0) | (1<<INT1);    // enable int0, int1 interrupts, normally high, interrupts set when button press makes input low
 	sei();
 	
