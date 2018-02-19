@@ -32,31 +32,33 @@ volatile int alarm_min = -1;
 
 int main(void)
 {
-
-	DDRD &= ~(1<<DDD0);    //Set PD0 as input pin for set_time() interrupt
-	PCICR |= (1<<PCIE2);    //Enables PCINT16, PD0 as set_time interrupt
-	
-	PCMSK2 = 0x01;    // only PCINT16 interrupt should be enabled
-
-	DDRD |= (1<<DDD6);    //OC0A as output, PD6, pin12
-	
-	DDRC = 0x00;
+	// Data Direction
 	DDRB |= (1<<DDB3) | (1<<DDB2) | (1<<DDB5);    //all output for PORTB except pb6 and pb7 for oscillator
-	
-	PORTB |= (1<<PORTB2) | (1<<PORTB5);    //CS HIGH
+	DDRC = 0x00;
+	DDRD &= ~(1<<DDD0);    //Set PD0 as input pin for set_time() interrupt
+	DDRD |= (1<<DDD6);    //OC0A as output, PD6, pin12
 
+	// Port Inital Conditions
+	PORTB |= (1<<PORTB2) | (1<<PORTB5);    //CS HIGH and CLK start HIGH
+
+	// Crystal and Timer
 	ASSR |= (1<<AS2);    //enable crystal as input for timer2
 	TCCR2B |= (1<<CS22) | (1<<CS20);    //Pre-scale of 128
 	//TCCR2B |=(1<<CS20);    //pre-scale = 1, used for testing
+
+	// Interrupts
 	EIMSK |= (1<<INT0) | (1<<INT1);    // enable int0, int1 interrupts, normally high, interrupts set when button press makes input low
+	PCICR |= (1<<PCIE2);    //Enables PCINT16, PD0 as set_time interrupt
+	PCMSK2 = 0x01;    // only PCINT16 interrupt should be enabled
 	sei();
-	
-	
+
+	// Initalize 7-Segment LED Driver
 	send_command(0x09, 0x0F);    //Decode mode for digits 0-3 (0xFF is for all digits)
 	send_command(0x0A, 0x00);    //Intensity at bottom
 	send_command(0x0B, 0x03);    //Scan digits (0,1,2,3)
 	send_command(0x0C, 0x01);    //Turn on display
-	
+
+	// Blank Screen then Initalize Values for hours and min
 	blank_display();
 	set_time();
 	
