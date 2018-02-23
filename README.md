@@ -22,6 +22,7 @@ This is where the time, alarm value or current circumstance of the alarm is disp
 
 -  32.768kHz crystal oscillator
 
-The 32.768kHz crystal oscillator was used as the timing mechanism in the alarm clock. The crystal has an Equivalent Series Resistance (ESR) of 30 kOhms and load capacitance of 12.5 pF. The crystal has a precision of +- 20 parts per million. The crystal controls a counter on the ATMEGA328 and this counter is divided by the correct counter pre-scaler of an 8-bit counter divided exactly to one second for every counter overflow. The exact division of this crystal to one second and it's precision are why it was used to control the clock. 
+The 32.768kHz crystal oscillator was used as the timing mechanism in the alarm clock. The crystal has an Equivalent Series Resistance (ESR) of 30 kOhms and load capacitance of 12.5 pF. The crystal has a precision of +- 20 parts per million. The crystal controls the frequency of an 8-bit counter on the ATMEGA328. The 32.768kHz frequency of the crystal divides exactly into 1 second intervals when the counter is configured to have a prescale of 64 and to overflow after the standard 256 ticks. The exact division of this crystal to one second and it's precision are why it was used to control the clock. 
 
 ## The Program:
+More to come soon...
