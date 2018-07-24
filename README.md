@@ -24,5 +24,10 @@ This is where the time, alarm value or current circumstance of the alarm is disp
 
 The 32.768kHz crystal oscillator was used as the timing mechanism in the alarm clock. The crystal has an Equivalent Series Resistance (ESR) of 30 kOhms and load capacitance of 12.5 pF. The crystal has a precision of +- 20 parts per million. The crystal controls the frequency of an 8-bit counter on the ATMEGA328. The 32.768kHz frequency of the crystal divides exactly into 1 second intervals when the counter is configured to have a prescale of 64 and to overflow after the standard 256 ticks. The exact division of this crystal to one second and it's precision are why it was used to control the clock. 
 
-## The Program:
-More to come soon...
+## Update
+- Total code revision
+- Now 24 hour clock (A.M./P.M.)
+- Changed LED Display
+- A.M., P.M., :, Alarm Indicators
+- Indicators need POT in series with resistor for brightness control
+- Lots of cleaning needed in code
