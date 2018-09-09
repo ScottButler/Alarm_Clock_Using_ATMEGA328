@@ -31,3 +31,9 @@ The 32.768kHz crystal oscillator was used as the timing mechanism in the alarm c
 - A.M., P.M., :, Alarm Indicators
 - Indicators need POT in series with resistor for brightness control
 - Lots of cleaning needed in code
+
+## Update 9/9
+- P.M. to A.M. bug fixed. 
+- Indictors for A.M. and P.M. work
+- Alarm indicator is very dim, whicth seems to be a hardware issue, will try with another MCU to see if the PORT is damaged
+- Alarm clock is working, needs testing and analysis
