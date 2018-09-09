@@ -32,45 +32,38 @@ void blank_display(void);
 void set_time(void);
 
 
-//void set_alarm(int hours, int min, int alarm_time_count, int hours_24_format);
+volatile int time_count;    // counts time in number of minuets
+volatile int alarm_time_count;
 
-volatile int time_count = 0;    // counts time in number of minuets
-
-
-uint8_t is_time_set_yet = 0;
-volatile uint8_t is_alarm_set = 0;
+uint8_t is_time_set_yet;
 uint8_t OCR0A_going_down=1;    //Alarm sounds stuff, prob volatile 
 
+volatile uint8_t is_alarm_set;
+volatile uint8_t has_time_been_set;
+volatile uint8_t was_time_just_set;
 volatile uint8_t second_count;
 volatile uint8_t hours;    // time values might not need to be volatile
 volatile uint8_t min;      // but I wanted to be safe working between interrupts
-//volatile int alarm_hours = -1;
-//volatile int alarm_min = -1;
 
-volatile int alarm_time_count;
-//volatile int time_count;
 volatile uint8_t hours_24_format;
-volatile uint8_t alarm_hours = 0;
-volatile uint8_t alarm_min = 0;
-volatile uint8_t alarm_hours_24 =0;
+volatile uint8_t alarm_hours;
+volatile uint8_t alarm_min;
+volatile uint8_t alarm_hours_24;
 
 int main(void)
 {
 	// Data Direction
 	DDRB |= (1<<DDB3) | (1<<DDB2) | (1<<DDB5);    //all output for PORTB except pb6 and pb7 for oscillator
-	//DDRC = 0x00;
 	DDRC = 0x07;    // 0x07 = 0b00000111, PC0, PC1, PC2 = Indicators
-	DDRD = 0xC0;    // 0xC0 = 0b11000000, DDD6 is 1 for OC0A output (alarm sound), NOW D7 is :
-	//DDRD &= ~(1<<DDD0);    //Set PD0 as input pin for set_time() interrupt
-	//DDRD |= (1<<DDD6);    //OC0A as output, PD6, pin12
+	DDRD = 0xC0;    // 0xC0 = 0b11000000, DDD6 is 1 for OC0A output (alarm sound), NOW D7 is ' indicator
 
 	// Port Initial Conditions
 	PORTB |= (1<<PORTB2) | (1<<PORTB5);    //CS HIGH and CLK start HIGH
 
 	// Crystal and Timer
+	//TCCR2B |= (1<<CS20);    // Pre-Sale = 1, use for Debugging
 	ASSR |= (1<<AS2);    //enable crystal as input for timer2
 	TCCR2B |= (1<<CS22) | (1<<CS20);    //Pre-scale of 128
-	//TCCR2B |=(1<<CS20);    //pre-scale = 1, used for testing
 
 	// Interrupts
 	EIMSK |= (1<<INT0) | (1<<INT1);    // enable int0, int1 interrupts, normally high, interrupts set when button press makes input low
@@ -80,18 +73,16 @@ int main(void)
 		
 	//  Initalize 7-Segment LED Driver
 	send_command(0x09, 0x0F);    //Decode mode for digits 0-3 (0xFF is for all digits)
-	send_command(0x0A, 0x00);    //Intensity at bottom
+	send_command(0x0A, 0x00);    //Intensity bottom
 	send_command(0x0B, 0x04);    //Scan digits (0,1,2,3,4),0,1 = min, 2,3 = hours digit4 = indicators
 	send_command(0x0C, 0x01);    //Turn on display
 
 	// Blank Screen then Initalize Values for hours and min
 	blank_display();
-	send_command(0x05, 0x0F);    // blank indicators
-	
-	// try to see how many local variables will work, might need to pass arguments through set_time() and make set_alarm() function to pass values
 	
 	PORTC |= (1<<PORTC2);    // Turn On :
-	set_time();    // hopefully this starts set_time() function and gives the value of time_count to
+	set_time();    // Initalize: time_value, hours, min and display
+	has_time_been_set = 1;
 	
 	while (1)
 	{
@@ -99,22 +90,22 @@ int main(void)
 		if (time_count == alarm_time_count && is_alarm_set ==1){
 			//is_alarm_set==1 is to make sure alarm does not go off at 12:00
 			TCCR0A |= (1<<WGM01);
-			TIMSK0 |=(1<<OCIE0A);    //maybe OCI0B
+			TIMSK0 |=(1<<OCIE0A);
 			OCR0A = 30;
 			TCCR0B |= (1<<CS00) | (1<<CS01);
-			is_alarm_set++;  //otherwise this gets stuck in a weird loop;
+			is_alarm_set++;  //otherwise this gets stuck in loop;
 		}
-
 		
-		second_count = 0;
 		// LED indicators for A.M., needs if statement
 		PORTC |= (1<<PORTC0);    // Turn on A.M. LED
 		PORTC &= ~(1<<PORTC1);    // Turn off P.M.
 		
+		second_count = 0;
+		
 		while (time_count < 720) {    // 720 minutes in 12 hours
 			while (second_count<60) {
-				if (TIFR2 & (1<<OCF2A)) {
-					TIFR2 |= (1<<OCF2A);
+				if (TIFR2 & (1<<TOV2)) {
+					TIFR2 |= (1<<TOV2);
 					second_count++;
 				}
 			}
@@ -131,17 +122,14 @@ int main(void)
 			
 			// Checks if alarm is set and equal to current time (every 60s)
 			if (time_count == alarm_time_count && is_alarm_set == 1){
-				//is_alarm_set==1 is to make sure alarm does not go off at 12:00
 				TCCR0A |= (1<<WGM01);
 				TIMSK0 |=(1<<OCIE0A);
 				OCR0A = 30;
 				TCCR0B |= (1<<CS00) | (1<<CS01);
-				is_alarm_set++;  //otherwise this gets stuck in a weird loop;
-				
+				is_alarm_set++;  //otherwise this gets stuck in loop;
 			}
 			
 			// Displays/update hour digits (every 60s)
-			
 			if (hours==0 || hours==12){    //moved 2 digits
 				hours = 0;    // Might be able to delete
 				send_command(0x03, 2);
@@ -163,25 +151,22 @@ int main(void)
 		
 		// Alarm bug fix that allows alarm set for 12:00 to work
 		if (time_count == alarm_time_count && is_alarm_set ==1){
-			//is_alarm_set==1 is to make sure alarm does not go off at 12:00
 			TCCR0A |= (1<<WGM01);
-			TIMSK0 |=(1<<OCIE0A);    //maybe OCI0B
+			TIMSK0 |=(1<<OCIE0A);
 			OCR0A = 30;
 			TCCR0B |= (1<<CS00) | (1<<CS01);
-			is_alarm_set++;  //otherwise this gets stuck in a weird loop;
+			is_alarm_set++;  //otherwise this gets stuck in loop;
 		}
 		
 		// Bug fix
 		hours = hours%12;
+		was_time_just_set = 0;
 		
-		//hours = 0;    // display code can stay the same now
-		//min = 0;
-		
-		//PM 12 hour Loop
-		while (time_count < 1440) {    // 1440 min in 24 hours
+		// P.M. 12 hour Loop
+		while (time_count >= 720) {    // 1440 min in 24 hours
 			while (second_count<60) {
-				if (TIFR2 & (1<<OCF2A)) {
-					TIFR2 |= (1<<OCF2A);
+				if (TIFR2 & (1<<TOV2)) {
+					TIFR2 |= (1<<TOV2);
 					second_count++;
 				}
 			}
@@ -189,6 +174,9 @@ int main(void)
 			time_count++;
 			min++;
 			if (min == 60){
+				if (time_count == 1440) {    // maybe will cause A.M. values to go to time_count<720 loop
+				break;
+				}
 				min = 0;
 				hours++;
 			}
@@ -208,7 +196,6 @@ int main(void)
 			}
 			
 			// Displays/update hour digits (every 60s)
-			
 			if (hours==0 || hours==12){    //moved 2 digits
 				hours = 0;    // Might be able to delete
 				send_command(0x03, 2);
@@ -223,9 +210,15 @@ int main(void)
 				send_command(0x04,1);
 			}
 		}    // end of if time_count<1440 (end P.M.)
+		
+		// Allows time to be P.M, then set to A.M. without making time_count = 0
+		if (was_time_just_set != 1) {
 		time_count = 0;
 		hours = 0;
 		min = 0;
+		was_time_just_set=0;
+		}
+		
 	}
 }
 
@@ -248,7 +241,7 @@ void send_command(int address_byte, int data_byte){
 	send_byte(data_byte);
 	PORTB |= (1<<PORTB2);    //CS high
 }
-// do not need to blank Indicators, delete comment if all is working
+
 void blank_display(void){
 	for (int i=1; i<5; i++){
 		send_command(i, 0x0F);
@@ -263,11 +256,7 @@ void set_time(void){
 	hours_24_format = 0;
 	hours = 0;
 	min = 0;
-	blank_display();
-
-	//PORTC |= (1<<PORTC0);    // A.M. Indicator = ON
-	//PORTC &= ~(1<<PORTC1);    // P.M. Indicator OFF
-	
+	blank_display();	
 	
 	while ((PINC & (1<<PORTC3))) {    // While P3 is High, goes low on button press
 
@@ -318,14 +307,11 @@ void set_time(void){
 			send_command(0x03, hours%10);
 			send_command(0x04,0x01);
 		}
-		//if (hours == 13){
-			//hours = 1;
-		//}
 	}
-	//New Stuff
+
 	send_command(0x01,0x0F);    //Blank min briefly when set, blanking hours looked weird to me
 	send_command(0x02,0x0F);
-	//End New Stuff
+
 	_delay_ms(500);
 
 	while ((PINC & (1<<PORTC3))){
@@ -346,12 +332,12 @@ void set_time(void){
 			send_command(0x01, min%10);
 			send_command(0x02,min/10);
 		}
-		//New Stuff
+		
 		else {
 			send_command(0x01,0x00);    // while setting the time if increment min was held display would not show min at 00, would go from 59, pause then to 01
 			send_command(0x02,0x00);
 		}
-		//End new stuff
+		
 		if (min == 60){    // New Stuff, was(min == 61), now(min==60), i think when setting the time going upward 00 would be displayed twice
 			min = 0;
 		}
@@ -375,14 +361,9 @@ void set_time(void){
 		
 
 	}
-	//time_count=0;    // might fix weird alarm bug (old comment)
-	time_count = (hours_24_format * 60);    // This was the but it was: time_count = (hours * 60);
+	time_count = (hours_24_format * 60);    // This was the same but it was: time_count = (hours * 60);
 	time_count = time_count + min;
 	
-	//int hour_number = hours*60;
-	//time_count = time_count+hour_number;    //sets time_count value to get to right spot of main
-	//time_count = time_count+min;
-
 	is_time_set_yet = 1;
 	blank_display();
 	_delay_ms(500);
@@ -391,7 +372,7 @@ void set_time(void){
 	// min
 	send_command(0x01, min%10);
 	send_command(0x02,min/10);
-	// hour
+	// hours
 	if (hours==0 || hours==12){
 		//hours = 0;
 		send_command(0x03, 2);
@@ -416,6 +397,21 @@ void set_time(void){
 		OCR0A = 30;
 		TCCR0B |= (1<<CS00) | (1<<CS01);
 		is_alarm_set++;  //otherwise this gets stuck in a weird loop;
+	}
+	// New 9/4
+	// allow for P.M. time to be able to be set to A.M. time
+	if (has_time_been_set == 1) {
+		was_time_just_set = 1;
+	}
+	else {
+		was_time_just_set=0;
+	}
+	
+	// New Bug Fix: Seconds = 60, time_count--, min--: will end min loop, go right to time_count++, seconds = 0, min ++
+	if (has_time_been_set == 1) {
+		second_count = 60;
+		time_count--;
+		min--; 
 	}
 	return;
 	// when return to main, main will be busy cycling through seconds to count the next minute, so, display need to reset display to new value of the time being set
@@ -446,7 +442,6 @@ ISR(INT0_vect)    //set alarm
 		if (!(PINC & (1<<PORTC4))){    //press bottom button hours goes down
 			if (alarm_hours_24 == 0){
 				alarm_hours_24 = 24;
-				//alarm_hours = 11;    //New Stuff
 			}
 			alarm_hours_24--;
 			_delay_ms(250);
@@ -471,13 +466,10 @@ ISR(INT0_vect)    //set alarm
 			//hour_count = 0;
 			send_command(0x03, 0x02);
 			send_command(0x04, 0x01);
-
 		}
 		if (alarm_hours<10 && alarm_hours!=0){
 			send_command(0x03,alarm_hours);
 			send_command(0x04,0x0F);
-
-
 		}
 		if (alarm_hours == 10){
 			send_command(0x03, 0x00);
@@ -487,14 +479,11 @@ ISR(INT0_vect)    //set alarm
 			send_command(0x03, alarm_hours%10);
 			send_command(0x04,0x01);
 
-		}
-				
+		}			
 	}
 	_delay_ms(500);
 
 	while ((PINC & (1<<PORTC3))){
-		
-		
 		if (!(PINC & (1<<PORTC5))){    //press top button hours goes up
 			alarm_min++;
 			_delay_ms(250);
@@ -554,7 +543,6 @@ ISR(INT0_vect)    //set alarm
 		PORTC |= (1<<PORTC1);    // P.M. Indicator ON
 	}
 	return;
-	
 }
 
 ISR (TIMER0_COMPA_vect)    // Alarm sound
@@ -580,8 +568,6 @@ ISR(INT1_vect)    //Turn off all alarm stuff
 {
 	TCCR0B = 0x00;    // Turns off Speaker
 	PORTD &= ~(1<<PORTD7);    // Turn OFF LED
-	//alarm_hours = -1;
-	//alarm_min = -1;
 	is_alarm_set = 0;
 	return;
 	
