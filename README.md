@@ -37,3 +37,11 @@ The 32.768kHz crystal oscillator was used as the timing mechanism in the alarm c
 - Indictors for A.M. and P.M. work
 - Alarm indicator is very dim, whicth seems to be a hardware issue, will try with another MCU to see if the PORT is damaged
 - Alarm clock is working, needs testing and analysis
+
+## New alarm clock program that uses timer interrupts
+- Each second there is a timer overflow interrupt where a variable, second_count, counts second
+- Inside the interrupt, seconds in a minute and total minutes past 12:00 A.M. are updated via volatile global variables
+- This takes care of many wasted clock cycles between minutes and hours in last program
+- Now there are minimal global variables
+- Crystal accuracy needs testing, may now need capacitors since far less wasted clock cycles
+- All functions of alarm clock work
