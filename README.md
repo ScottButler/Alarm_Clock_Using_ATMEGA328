@@ -1,4 +1,4 @@
-# Alarm_Clock_Using_ATMEGA328
+﻿# Alarm_Clock_Using_ATMEGA328
 ## Overview:
 This is a project where I designed and built a digital alarm clock using the Atmel ATMEGA328 microcontroller.
 ## Features:
@@ -172,3 +172,20 @@ if ((time_count == alarm_time_count) && is_alarm_set == 1){
 ### Why two separate programs
 - This will be discussed later, along with test results and edits to readme
 - Stay tuned for more…
+
+### Video
+- I added a video that shows a proof of concept demo of the alarm functionality
+- Video has low audio quality and acoustics, so the alarm sound is not as loud as in person.
+- To hear the alarm sound, turn the volume up on your computer.
+## Testing
+-I compared the time on my alarm clock with a Sony alarm clock that I have on my desk.
+- I started my clock at the same time displayed on the Sony as close as I could on a minute transition  
+## Testing
+- I compared the time on my alarm clock with a Sony alarm clock that I have on my desk.
+- I started my clock at the same time displayed on the Sony as close as I could on a minute transition, noted how closely the clocks times match up, and then watched for deviations of the times displayed on both clocks.
+####Result:
+- After about one week, my clock was between half a second and one second faster than the Sony.
+- So the time for my clock to be one minute faster than the Sony clock would be, roughly, between 1 and 2 years. 
+Note: I need to run this experiment more times and for longer durations to get a more precise result. 
+
+
